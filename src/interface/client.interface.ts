@@ -1,4 +1,4 @@
-export interface IGroup {
+export interface IClient {
   id: string,
   group: string,
   createdAt: number,

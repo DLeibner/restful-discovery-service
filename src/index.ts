@@ -1,27 +1,57 @@
 import express, { Express, Request, Response } from 'express';
 import dotenv from 'dotenv';
+import { Client } from './models/clientModel';
+import mongoose from 'mongoose';
+import { IClient } from './interface/client.interface';
 
 dotenv.config();
+const url = 'mongodb://127.0.0.1:27017/ubio'
+mongoose.connect(url);
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
 app.get('/', (_req: Request, res: Response) => {
-  // returns a JSON array containing a summary of all currently registered groups
+  
   res.send('Express + TypeScript Server');
 });
 
-app.get('/:group', (req: Request, res: Response) => {
-  // find group and return array describing instances of the group
-  res.json();
+app.get('/:group', async (req: Request, res: Response) => {
+  const existingClients = await Client.find({ group: req.params.group}).exec();
+
+  if (!existingClients) {
+    res.status(204).json(existingClients);
+    return;
+  }
+  
+  res.json(existingClients);
 });
 
-app.put('/:group/:id', (req: Request, res: Response) => {
+app.put('/:group/:id', async (req: Request, res: Response) => {
+  const existingClient = await Client.findOne({ id: req.params.id, group: req.params.group }).exec();
 
+  const client: IClient = {
+    id: req.params.id,
+    group: req.params.group,
+    createdAt: existingClient ? existingClient.createdAt : Date.now(),
+    updatedAt: Date.now(),
+    meta: req.body
+  }
+
+  if (!existingClient) {
+    const newGroup = new Client(client);
+    await newGroup.save();
+  } else {
+    existingClient.update({...client});
+  }
+
+  res.json(client)
 });
 
-app.delete(':group/:id', (req: Request, res: Response) => {
+app.delete('/:group/:id', async (req: Request, res: Response) => {
+  await Client.deleteOne({  id: req.params.id, group: req.params.group });
 
+  res.status(204);
 });
 
 app.listen(port, () => {
