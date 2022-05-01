@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { Client } from './models/clientModel';
 import mongoose from 'mongoose';
 import { IClient } from './interface/client.interface';
+import { IGroupSummary } from './interface/group-summary.interface';
 
 dotenv.config();
 const url = 'mongodb://127.0.0.1:27017/ubio'
@@ -11,9 +12,22 @@ mongoose.connect(url);
 const app: Express = express();
 const port = process.env.PORT || 3000;
 
-app.get('/', (_req: Request, res: Response) => {
-  
-  res.send('Express + TypeScript Server');
+app.get('/', async (_req: Request, res: Response) => {
+  const groups = await Client.aggregate().group({
+    _id: '$group',
+    "instances": { "$sum": 1 },
+    "createdAt": { "$min": "$createdAt" },
+    "lastUpdatedAt": { "$max": "$updatedAt" },
+  });
+  res.json(groups.map(x => {
+    const groupSummary: IGroupSummary = {
+      group: x._id,
+      instances: x.instances,
+      createdAt: x.createdAt,
+      lastUpdatedAt: x.lastUpdatedAt
+    }
+    return groupSummary;
+  }));
 });
 
 app.get('/:group', async (req: Request, res: Response) => {
@@ -39,8 +53,8 @@ app.put('/:group/:id', async (req: Request, res: Response) => {
   }
 
   if (!existingClient) {
-    const newGroup = new Client(client);
-    await newGroup.save();
+    const newClient = new Client(client);
+    await newClient.save();
   } else {
     existingClient.update({...client});
   }
