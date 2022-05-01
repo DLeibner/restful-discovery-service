@@ -11,6 +11,7 @@ mongoose.connect(url);
 
 const app: Express = express();
 const port = process.env.PORT || 3000;
+const clientInactivityThreshold = Number(process.env.CLIENT_INACTIVITY_THRESHOLD_MS) || 60000;
 
 app.get('/', async (_req: Request, res: Response) => {
   const groups = await Client.aggregate().group({
@@ -72,10 +73,11 @@ app.listen(port, () => {
   console.log(`Server is running at https://localhost:${port}`);
 });
 
-const checkClientInactivity = () => {
-  const now = Date.now();
-
-  // TODO foreach entry in database compare updatedAt with now and remove if higher than threshold
+const checkClientInactivity = async () => {
+  const currentThresholdTime = Date.now() - clientInactivityThreshold;
+  await Client.deleteMany({
+    updatedAt: { $lt: currentThresholdTime }
+  });
 }
 
-setInterval(checkClientInactivity, Number(process.env.CLIENT_INACTIVITY_THRESHOLD_MS));
+setInterval(checkClientInactivity, clientInactivityThreshold / 2);
