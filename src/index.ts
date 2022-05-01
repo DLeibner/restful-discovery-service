@@ -6,7 +6,7 @@ import { IClient } from './interface/client.interface';
 import { IGroupSummary } from './interface/group-summary.interface';
 
 dotenv.config();
-const url = 'mongodb://127.0.0.1:27017/ubio'
+const url = process.env.MONGODB_URL || 'mongodb://127.0.0.1:27017/ubio';
 mongoose.connect(url);
 
 const app: Express = express();
@@ -75,7 +75,7 @@ app.listen(port, () => {
 const checkClientInactivity = () => {
   const now = Date.now();
 
-  // TODO foreach entry in database compare updatedAt with now and remove if higher than treshold
+  // TODO foreach entry in database compare updatedAt with now and remove if higher than threshold
 }
 
-setInterval(checkClientInactivity, Number(process.env.CLIENT_INACTIVITY_TRESHOLD_MS));
+setInterval(checkClientInactivity, Number(process.env.CLIENT_INACTIVITY_THRESHOLD_MS));
