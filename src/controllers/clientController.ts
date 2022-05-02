@@ -14,14 +14,15 @@ export default class ClientController {
       updatedAt: Date.now(),
       meta: req.body
     }
-  
+
     if (!existingClient) {
       const newClient = new Client(client);
       await newClient.save();
     } else {
-      existingClient.update({...client});
+      existingClient.updatedAt = client.updatedAt;
+      await existingClient.save();
     }
-  
+
     res.json(client)
   }
 
