@@ -1,5 +1,6 @@
 import ClientController from '../controllers/clientController';
 import { IClient } from '../interface/client.interface';
+import { IGroupSummary } from '../interface/group-summary.interface';
 import { Client } from '../models/clientModel';
 
 describe('Client Controller Tests:', () => {
@@ -59,6 +60,129 @@ describe('Client Controller Tests:', () => {
       expect(result.group).toBe(client.group);
       expect(result.createdAt).toBe(client.createdAt);
       expect(result.updatedAt).toBeGreaterThan(client.updatedAt);
+    })
+  })
+
+  describe('Get Group', () => {
+    const mockRequest: any = {
+      params: {
+        group: 'particle-detector'
+      },
+    };
+    const mockResponse = () => {
+      const res: any = {};
+      res.status = jest.fn().mockReturnValue(res);
+      res.json = jest.fn().mockReturnValue(res);
+      return res;
+    };
+
+    it('should return no content', async () => {
+      Client.find = jest.fn().mockReturnValue({exec: () => []});
+
+      const res = mockResponse();
+      await ClientController.getGroup(mockRequest, res);
+      expect(res.status).toBeCalledWith(204);
+    })
+
+    it('should return group with 1 client', async () => {
+      const client: IClient = {
+        id: mockRequest.params.id,
+        group: mockRequest.params.group,
+        createdAt: 1571418096158,
+        updatedAt: 1571418896188,
+        meta: mockRequest.body
+      }
+      const clients = [new Client(client)];
+      Client.find = jest.fn().mockReturnValue({exec: () => clients});
+
+      const res = mockResponse();
+      await ClientController.getGroup(mockRequest, res);
+      expect(res.status).toBeCalledWith(200);
+      expect(res.json).toBeCalledWith(clients);
+    })
+  })
+
+  describe('Get', () => {
+    const mockResponse = () => {
+      const res: any = {};
+      res.json = jest.fn().mockReturnValue(res);
+      return res;
+    };
+
+    it('should return empty array', async () => {
+      Client.aggregate = jest.fn().mockReturnValueOnce({group: () => { return { exec: () => [] }}});
+
+      const res = mockResponse();
+      let req: any;
+      await ClientController.get(req, res);
+      expect(res.json).toBeCalledWith([]);
+    })
+
+    it ('should return summary of 2 groups', async () => {
+      const groupsSummary: IGroupSummary[] = [
+        {
+          group: 'particle-detector',
+          instances: 2,
+          createdAt: 1571418096158,
+          lastUpdatedAt: 1571448596169
+        },
+        {
+          group: 'particle-detector1',
+          instances: 5,
+          createdAt: 1571418045249,
+          lastUpdatedAt: 1571419945260
+        },
+      ]
+      Client.aggregate = jest.fn().mockReturnValueOnce({ group: () => { return { exec: () => [
+        {
+          _id: groupsSummary[0].group,
+          instances: groupsSummary[0].instances,
+          createdAt: groupsSummary[0].createdAt,
+          lastUpdatedAt: groupsSummary[0].lastUpdatedAt
+        },
+        {
+          _id: groupsSummary[1].group,
+          instances: groupsSummary[1].instances,
+          createdAt: groupsSummary[1].createdAt,
+          lastUpdatedAt: groupsSummary[1].lastUpdatedAt
+        },
+      ]
+     }}});
+
+     const res = mockResponse();
+     let req: any;
+     await ClientController.get(req, res);
+     expect(res.json).toBeCalledWith(groupsSummary);
+    })
+  })
+
+  describe('Delete', () => {
+    const mockRequest: any = {
+      params: {
+        id: 'e335175a-eace-4a74-b99c-c6466b6afefaqaa3',
+        group: 'particle-detector'
+      }
+    };
+    const mockResponse = () => {
+      const res: any = {};
+      res.sendStatus = jest.fn().mockReturnValue(res);
+      return res;
+    };
+
+    it('should delete non existing client', async () => {
+      Client.deleteOne = jest.fn().mockReturnValueOnce({exec: () => 0});
+
+      const res = mockResponse();
+      await ClientController.delete(mockRequest, res);
+      expect(res.sendStatus).toBeCalledWith(204);
+    })
+
+    it('should delete existing client', async () => {
+      Client.deleteOne = jest.fn().mockReturnValueOnce({exec: () => 1});
+
+      const res = mockResponse();
+      await ClientController.delete(mockRequest, res);
+      expect(res.sendStatus).toBeCalledWith(204);
     })
   })
 })
