@@ -4,6 +4,12 @@ import { IGroupSummary } from '../interface/group-summary.interface';
 import { Client } from '../models/clientModel';
 
 describe('Client Controller Tests:', () => {
+  const mockSendStatusResponse = () => {
+    const resStatus: any = {};
+    resStatus.sendStatus = jest.fn().mockReturnValue(resStatus);
+    return resStatus;
+  };
+
   describe('Put', () => {
     Client.prototype.save = jest.fn(() => {});
 
@@ -61,6 +67,16 @@ describe('Client Controller Tests:', () => {
       expect(result.createdAt).toBe(client.createdAt);
       expect(result.updatedAt).toBeGreaterThan(client.updatedAt);
     })
+
+    it('should send status 500', async () => {
+      Client.findOne = jest.fn().mockReturnValueOnce({exec: () => { throw new Error(); } });
+
+      const res = mockSendStatusResponse();
+
+      await ClientController.put(mockRequest, res);
+
+      expect(res.sendStatus).toBeCalledWith(500);
+    })
   })
 
   describe('Get Group', () => {
@@ -77,7 +93,7 @@ describe('Client Controller Tests:', () => {
     };
 
     it('should return no content', async () => {
-      Client.find = jest.fn().mockReturnValue({exec: () => []});
+      Client.find = jest.fn().mockReturnValueOnce({exec: () => []});
 
       const res = mockResponse();
       await ClientController.getGroup(mockRequest, res);
@@ -93,12 +109,21 @@ describe('Client Controller Tests:', () => {
         meta: mockRequest.body
       }
       const clients = [new Client(client)];
-      Client.find = jest.fn().mockReturnValue({exec: () => clients});
+      Client.find = jest.fn().mockReturnValueOnce({exec: () => clients});
 
       const res = mockResponse();
       await ClientController.getGroup(mockRequest, res);
       expect(res.status).toBeCalledWith(200);
       expect(res.json).toBeCalledWith(clients);
+    })
+
+    it('should send status 500', async () => {
+      Client.find = jest.fn().mockReturnValueOnce({exec: () => { throw new Error(); } });
+
+      const res = mockSendStatusResponse();
+      await ClientController.put(mockRequest, res);
+
+      expect(res.sendStatus).toBeCalledWith(500);
     })
   })
 
@@ -154,6 +179,16 @@ describe('Client Controller Tests:', () => {
      await ClientController.get(req, res);
      expect(res.json).toBeCalledWith(groupsSummary);
     })
+
+    it('should send status 500', async () => {
+      Client.aggregate = jest.fn().mockReturnValueOnce({group: () => { return { exec: () => { throw new Error(); } }}});
+
+      const res = mockSendStatusResponse();
+      let req: any;
+      await ClientController.put(req, res);
+
+      expect(res.sendStatus).toBeCalledWith(500);
+    })
   })
 
   describe('Delete', () => {
@@ -163,16 +198,11 @@ describe('Client Controller Tests:', () => {
         group: 'particle-detector'
       }
     };
-    const mockResponse = () => {
-      const res: any = {};
-      res.sendStatus = jest.fn().mockReturnValue(res);
-      return res;
-    };
 
     it('should delete non existing client', async () => {
       Client.deleteOne = jest.fn().mockReturnValueOnce({exec: () => 0});
 
-      const res = mockResponse();
+      const res = mockSendStatusResponse();
       await ClientController.delete(mockRequest, res);
       expect(res.sendStatus).toBeCalledWith(204);
     })
@@ -180,9 +210,17 @@ describe('Client Controller Tests:', () => {
     it('should delete existing client', async () => {
       Client.deleteOne = jest.fn().mockReturnValueOnce({exec: () => 1});
 
-      const res = mockResponse();
+      const res = mockSendStatusResponse();
       await ClientController.delete(mockRequest, res);
       expect(res.sendStatus).toBeCalledWith(204);
+    })
+
+    it('should send status 500', async () => {
+      Client.deleteOne = jest.fn().mockReturnValueOnce({exec: () => { throw new Error(); }});
+
+      const res = mockSendStatusResponse();
+      await ClientController.delete(mockRequest, res);
+      expect(res.sendStatus).toBeCalledWith(500);
     })
   })
 })
